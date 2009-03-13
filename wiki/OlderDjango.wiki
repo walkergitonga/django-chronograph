@@ -1,0 +1,22 @@
+If you want to use chronograph on an older version of Django, here are some tips from nathforge.
+
+Updated chronograph/views.py like so:
+
+{{{
+from django.contrib import admin
+from django.contrib.auth.decorators import user_passes_test
+from admin import JobAdmin
+from models import Job
+
+def job_run(request, pk):
+    return JobAdmin(Job, admin.site).run_job_view(request, pk)
+
+job_run = user_passes_test(lambda user: user.is_superuser)(job_run)
+}}}
+
+And a new pattern in your project's urls.py:
+
+{{{
+url(r'^admin/chronograph/job/(?P<pk>\d+)/run/$',
+'chronograph.views.job_run', name="admin_chronograph_job_run")
+}}}
