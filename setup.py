@@ -1,7 +1,15 @@
-import shutil, os, re
+# hook to find setup tools if not installed
+import os
+import re
+from ez_setup import use_setuptools
+use_setuptools()
+
 from setuptools import setup, find_packages
 
 app_name = 'django-chronograph'
+root_dir = os.path.dirname(__file__)
+if not root_dir:
+    root_dir = '.'
 
 def get_svn_revision(path=None):
     rev = None
@@ -26,52 +34,17 @@ def get_svn_revision(path=None):
         return u'svn-r%s' % rev
     return u'svn-unknown'
 
-def fullsplit(path, result=None):
-    """
-    Split a pathname into components (the opposite of os.path.join) in a
-    platform-neutral way.
-    """
-    if result is None:
-        result = []
-    head, tail = os.path.split(path)
-    if head == '':
-        return [tail] + result
-    if head == path:
-        return result
-    return fullsplit(head, [tail] + result)
-
-packages, data_files = [], []
-root_dir = os.path.dirname(__file__)
-if not root_dir:
-    root_dir = '.'
-
-src_dir = os.path.join(root_dir, app_name)
-pieces = fullsplit(root_dir)
-if pieces[-1] == '':
-    len_root_dir = len(pieces) - 1
-else:
-    len_root_dir = len(pieces)
-
-for dirpath, dirnames, filenames in os.walk(src_dir):
-    # Ignore dirnames that start with '.'
-    for i, dirname in enumerate(dirnames):
-        if dirname.startswith('.'):
-            del dirnames[i]
-    #if 'conf' in dirpath:
-    #    print dirpath
-    if '__init__.py' in filenames and not 'conf' in dirpath:
-        packages.append('.'.join(fullsplit(dirpath)[len_root_dir:]))
-    elif filenames:
-        data_files.append([dirpath, [os.path.join(dirpath, f) for f in filenames]])
-
 setup(
-    name=app_name,
-    version=get_svn_revision(root_dir),
+    name = app_name,
+    version = get_svn_revision(root_dir),
+    packages = find_packages(),
+
+    include_package_data=True,
+    zip_safe=False,
+
     description='Django chronograph application.',
     author='Weston Nielson',
     author_email='wnielson@gmail.com',
-    packages = packages,
-    data_files = data_files,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
@@ -81,7 +54,5 @@ setup(
         'Programming Language :: Python',
         'Framework :: Django',
     ],
-    include_package_data=True,
-    zip_safe=False,
-    install_requires=['setuptools'],
+    url = "http://code.google.com/p/django-chronograph/",   # project home page, if any
 )
