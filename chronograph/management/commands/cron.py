@@ -5,5 +5,8 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         from chronograph.models import Job
+        procs = []
         for job in Job.objects.due():
-            job.run()
+            procs.append(job.run(False))
+        for p in procs:
+            p.wait()

@@ -6,6 +6,7 @@ class Command( BaseCommand ):
     def handle( self, *args, **options ):
         from chronograph.models import Log
         from datetime import datetime, timedelta
+                
         if len( args ) != 2:
             print 'Command requires two argument. Unit (weeks, days, hours or minutes) and interval.'
             return

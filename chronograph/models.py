@@ -1,16 +1,12 @@
 from django.db import models
 from django.utils.timesince import timeuntil
 from django.utils.translation import ungettext, ugettext, ugettext_lazy as _
-from django.template import loader, Context
-from django.conf import settings
 from django.utils.encoding import smart_str
 
-import os
-import sys
-import traceback
+from chronograph.utils import run_job
+
 from datetime import datetime
 from dateutil import rrule
-from StringIO import StringIO
 
 class JobManager(models.Manager):
     def due(self):
@@ -128,62 +124,15 @@ class Job(models.Model):
                 args.append(arg)
         return (args, options)
     
-    def run(self, save=True):
+    def run(self, wait=True):
         """
         Runs this ``Job``.  If ``save`` is ``True`` the dates (``last_run`` and ``next_run``)
         are updated.  If ``save`` is ``False`` the job simply gets run and nothing changes.
         
         A ``Log`` will be created if there is any output from either stdout or stderr.
         """
-        from django.core.management import call_command
-        
-        args, options = self.get_args()
-        stdout = StringIO()
-        stderr = StringIO()
-        
-        # Redirect output so that we can log it if there is any
-        ostdout = sys.stdout
-        ostderr = sys.stderr
-        sys.stdout = stdout
-        sys.stderr = stderr
-        stdout_str, stderr_str = "", ""
-        
-        run_date = datetime.now()
-        self.is_running = True
-        self.save()
-        try:
-            call_command(self.command, *args, **options)
-        except Exception, e:
-            # The command failed to run; log the exception
-            t = loader.get_template('chronograph/error_message.txt')
-            c = Context({
-              'exception': unicode(e),
-              'traceback': ['\n'.join(traceback.format_exception(*sys.exc_info()))]
-            })
-            stderr_str += t.render(c)
-        self.is_running = False
-        self.save()
-        
-        if save:
-            self.last_run = run_date
-            self.next_run = self.rrule.after(run_date)
-            self.save()
-        
-        # If we got any output, save it to the log
-        stdout_str += stdout.getvalue()
-        stderr_str += stderr.getvalue()
-        if stdout_str or stderr_str:
-            log = Log.objects.create(
-                job = self,
-                run_date = run_date,
-                stdout = stdout_str,
-                stderr = stderr_str
-            )
-        
-        # Redirect output back to default
-        sys.stdout = ostdout
-        sys.stderr = ostderr
-            
+        if not self.disabled:
+            return run_job(self, wait)
 
 class Log(models.Model):
     """
